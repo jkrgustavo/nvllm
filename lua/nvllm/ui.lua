@@ -3,6 +3,7 @@ package.loaded["nvllm.utils"] = nil
 
 ---@class NvllmUi
 ---@field active_bufnr number
+---@field namespace number
 ---@field config NvllmUiConfig
 local NvllmUi = {}
 
@@ -80,6 +81,36 @@ function NvllmUi:print(...)
     end)
 end
 
+function NvllmUi:print_virtual(...)
+    local arg = {...}
+    local output = table.concat(arg, '\t') .. '\n'
+
+    local lines = {}
+    for line in output:gmatch("[^\n]+") do
+        table.insert(lines, line)
+    end
+
+    local ns = vim.api.nvim_create_namespace("")
+
+    vim.schedule(function()
+        local line_count = vim.api.nvim_buf_line_count(self.active_bufnr) - 1
+        vim.api.nvim_buf_set_extmark(self.active_bufnr, ns, line_count, -1, {
+            virt_text = {{ table.concat(lines, '\n'), "Comment" }},
+            virt_text_pos = "inline",
+        })
+
+        vim.api.nvim_create_autocmd({ "TextChanged", "TextChangedI" }, {
+            buffer = self.active_bufnr,
+            callback = function()
+                vim.api.nvim_buf_clear_namespace(self.active_bufnr, 0, 0, -1)
+                return true
+            end,
+            desc = "Clear virtual text on buffer change",
+        })
+    end)
+end
+
+-- wrap text to the width of the window
 ---@param text string
 ---@param width number
 function NvllmUi:wrap_text(text, width)
@@ -108,12 +139,15 @@ function NvllmUi:wrap_text(text, width)
     return wrapped
 end
 
-function NvllmUi:print_llm_response(text)
+-- wrap text to the width of the window and print it to the buffer
+---@param text string
+function NvllmUi:wrap_and_print(text)
     local width = self.config.dimensions.width
 
     self:print(table.concat(self:wrap_text(text, width), '\n'))
 end
 
+-- clear the buffer of all text
 function NvllmUi:clear()
     vim.schedule(function()
         vim.api.nvim_buf_set_lines(self.active_bufnr, 0, -1, false, {})
