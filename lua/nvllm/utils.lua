@@ -72,6 +72,8 @@ if printed_tables[t] then
     return table.concat(lines, "\n")
 end
 
+---@param path string
+---@return table|nil, string?
 function M.read_file(path)
     local file, err = io.open(path, "rb")
     local env = {}
@@ -97,6 +99,11 @@ function M.read_file(path)
     end
 
     file:close()
+
+    if env == {} then
+        return nil
+    end
+
     return env
 end
 

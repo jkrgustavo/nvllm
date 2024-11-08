@@ -17,6 +17,10 @@ local Utils = require('nvllm.utils')
 
 ---@return NvllmConfig
 function M.get_default_config()
+    local key, err = Utils.read_file(".env")
+    if not key and not err then
+        key = {}
+    end
     return {
         ui = {
             dimensions = {
